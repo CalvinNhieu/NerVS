@@ -1,0 +1,12 @@
+body {
+/*	background-image:url('darkbrick.png');*/
+	text-align:center;
+}
+
+#canvas {
+	width:450px;
+	height:750px;
+	background-color: #000000;
+	border:1px solid #c3c3c3;
+	opacity:0;
+}
