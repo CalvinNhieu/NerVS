@@ -1,5 +1,5 @@
 startup = true;
-menu = false;
+menu = true;
 
 $(document).ready(function() { // SET UP GAME LOOP
 	c=document.getElementById("canvas");
