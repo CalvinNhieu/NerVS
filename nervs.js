@@ -1,4 +1,5 @@
 startup = true;
+menu = false;
 
 $(document).ready(function() { // SET UP GAME LOOP
 	c=document.getElementById("canvas");
@@ -58,6 +59,12 @@ init = function() {
             if (dude.selectedIndex < 0) dude.selectedIndex=paths.length-1;
             clear();
         }
+        if (e.keyCode == 80) { // P - PLAY
+            menu = false;
+        }
+        if (e.keyCode == 77) { // M - MENU
+            menu = true;
+        }
     }, false);
         startup = false;
     }
@@ -85,37 +92,52 @@ draw = function() {
     for (var i=0;i<paths.length;i++) { // loop through paths
         var curr = paths[i].firstNode; // for iteration
         while (curr.nxt) { // for iteration
-            if(curr.matched) ctx.strokeStyle = "#EEEEEE";
-            else ctx.strokeStyle = 'rgb('+paths[i].color.r+','+paths[i].color.g+','+paths[i].color.b+')'; //select path color
-            drawLine(curr.x,curr.y,curr.nxt.x,curr.nxt.y); // connect nodes
+            if(curr.matched) ctx.fillStyle = "#EEEEEE";
+            else ctx.fillStyle = 'rgb('+paths[i].color.r+','+paths[i].color.g+','+paths[i].color.b+')'; //select path color
+            if (dude.selectedIndex == i && !menu) ctx.fillRect(curr.x,curr.y,curr.nxt.x-curr.x+2,curr.nxt.y-curr.y+2);
+            //else drawLine(curr.x,curr.y,curr.nxt.x,curr.nxt.y); // connect nodes
+            else ctx.fillRect(curr.x,curr.y,curr.nxt.x-curr.x+1,curr.nxt.y-curr.y+1);
             curr=curr.nxt; // iterate
         }
     }
     
-    for (var i=0;i<signals.length;i++) {
-        if(signals[i].existence<signalLife) ctx.fillStyle = "#FFFF00"; 
-        else if(signals[i].existence>=signalLife && signals[i].existence<signalLife*2) ctx.fillStyle = "#FFBB00"; 
-        else ctx.fillStyle = "#FF0000"; 
-        fillCircle(signals[i].x,signals[i].y,signals[i].radius);
-    }
-    
-    ctx.strokeStyle = "#FF0000"; // red selector
+    if (!menu) {
+        ctx.strokeStyle = "#FF0000"; // red selector
     drawCircle(paths[dude.selectedIndex].firstNode.x, paths[dude.selectedIndex].firstNode.y, dude.selectorRadius); //  draw selector
-    
-    ctx.fillStyle = "#444444";
-    ctx.fillRect(10,10,150,20);
-    ctx.fillStyle = "#BBBBBB";
-    ctx.fillRect(12,12,146,16);
-    ctx.fillStyle = "#FF0000";
-    ctx.fillRect(12,12,146*dude.health,16);
-    
-    
-    ctx.fillStyle = "#222222";
-    ctx.fillText("PATTERN:",10,50);
-    for(var i=0;i<dude.input.length;i++) { // PRINT USER INPUT
-        ctx.fillText(dude.input[i],65+10*i,50);
+        
+        for (var i=0;i<signals.length;i++) {
+            if(signals[i].existence<signalLife) ctx.fillStyle = "#FFFF00"; 
+            else if(signals[i].existence>=signalLife && signals[i].existence<signalLife*2) ctx.fillStyle = "#FFBB00"; 
+            else ctx.fillStyle = "#FF0000"; 
+            fillCircle(signals[i].x,signals[i].y,signals[i].radius);
+            if(dude.selectedIndex == signals[i].pathIndex) ctx.font = "18px Arial";
+            else ctx.font = "10px Arial";
+            ctx.fillStyle = "#222222";
+            ctx.fillText(signals[i].existence,signals[i].x+8,signals[i].y+10);
+        }
+        
+        
+        ctx.font = "30px Amatic SC"
+        ctx.fillStyle = "#444444";
+        ctx.fillRect(10,10,200,20);
+        ctx.fillStyle = "#BBBBBB";
+        ctx.fillRect(12,12,196,16);
+        ctx.fillStyle = "#FF0000";
+        ctx.fillRect(12,12,196*dude.health,16);
+        
+        ctx.fillStyle = "#222222";
+        ctx.fillText("PATTERN:",10,60);
+        for(var i=0;i<dude.input.length;i++) { // PRINT USER INPUT
+            ctx.fillText(dude.input[i],80+12*i,60);
+        }
+        ctx.fillText("SCORE: "+dude.score,10,90);
     }
-    ctx.fillText("SCORE: "+dude.score,10,70);
+    else {
+        ctx.fillStyle = "#FF69B4";
+        ctx.font = "30px Amatic SC"
+        ctx.fillText("Press 'P' to play",102,35);
+        ctx.fillText("'M' to return here",90,65);
+    }
 };
 
 process = function () {
@@ -128,7 +150,7 @@ process = function () {
             }
             counter++; // count every success
         }
-        if(counter>0 && frameCount>signalLife) signals[paths[dude.selectedIndex].signalIndex].birth+=signalLife;
+        if(counter>0 && signals[paths[dude.selectedIndex].signalIndex].existence>signalLife) signals[paths[dude.selectedIndex].signalIndex].birth+=signalLife;
         else if (counter>0) signals[paths[dude.selectedIndex].signalIndex].birth=f;
         signals[paths[dude.selectedIndex].signalIndex].nodeVal+=counter; // update signal's position on path
         var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's new node position and values
@@ -140,27 +162,29 @@ process = function () {
     } 
     
     if (signals[paths[dude.selectedIndex].signalIndex].y == paths[dude.selectedIndex].lastNode.y) { // IF COMPLETED ENTIRE PATH
+        dude.score+=(1500-signals[paths[dude.selectedIndex].signalIndex].existence); // increase score
         generateSignal(paths[dude.selectedIndex].signalIndex); // generate a new signal
-        dude.score++; // increase score
         paths[dude.selectedIndex].live = false; // reset path (no signal)
         paths[dude.selectedIndex].selectedIndex = -1; // reset path (no signal-no signal index)
     }
 };
 
 checkMatches = function() {
-    var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's node position
-    for (var i=0; i<signals[paths[dude.selectedIndex].signalIndex].nodeVal;i++) { // iterate through path until arrive at signal position
-        curr = curr.nxt; // iterate
-    }
-    for(var i=0;i<dude.input.length;i++) {
-        if (dude.input[i] == paths[dude.selectedIndex].key[signals[paths[dude.selectedIndex].signalIndex].nodeVal+i]) {
-            curr.matched = true;
+    if (paths[dude.selectedIndex].live) {
+        var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's node position
+        for (var i=0; i<signals[paths[dude.selectedIndex].signalIndex].nodeVal;i++) { // iterate through path until arrive at signal position
+            curr = curr.nxt; // iterate
         }
-        else {
-            clear();
-            return;
+        for(var i=0;i<dude.input.length;i++) {
+            if (dude.input[i] == paths[dude.selectedIndex].key[signals[paths[dude.selectedIndex].signalIndex].nodeVal+i]) {
+                curr.matched = true;
+            }
+            else {
+                clear();
+                return;
+            }
+            curr=curr.nxt;
         }
-        curr=curr.nxt;
     }
 };
 
@@ -244,6 +268,7 @@ generateSignal = function(indx) {
 
 checkGame = function () {
     if (dude.health < 0.1) init();
+    else if (menu && frameCount%40==0) init();
 }
 
 Player = function () {
