@@ -1,12 +1,16 @@
 body {
-/*	background-image:url('darkbrick.png');*/
+	background-image:url('lightpaperfibers.png');
 	text-align:center;
+    font-family:"Amatic SC";
 }
 
 #canvas {
 	width:750px;
 	height:750px;
-	background-color: #000000;
-	border:1px solid #c3c3c3;
+	border:5px solid #222222;
 	opacity:0;
+}
+
+h3 {
+    font-family:"Indie Flower";
 }

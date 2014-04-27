@@ -74,7 +74,7 @@ update = function() { // game logic
 };
 
 draw = function() {
-    ctx.fillStyle = "#000000"; // black screen
+    ctx.fillStyle = "#DDDDDD"; // gray screen
     ctx.fillRect(0,0,c.width,c.height); // fill screen;
     ctx.fillStyle = "#FF69B4"; // pink brain
     ctx.fillRect(b.x,b.y,b.width,b.height); // draw brain
@@ -82,7 +82,7 @@ draw = function() {
     for (var i=0;i<paths.length;i++) { // loop through paths
         var curr = paths[i].firstNode; // for iteration
         while (curr.nxt) { // for iteration
-            if(curr.matched) ctx.strokeStyle = "#FFFFFF";
+            if(curr.matched) ctx.strokeStyle = "#EEEEEE";
             else ctx.strokeStyle = 'rgb('+paths[i].color.r+','+paths[i].color.g+','+paths[i].color.b+')'; //select path color
             drawLine(curr.x,curr.y,curr.nxt.x,curr.nxt.y); // connect nodes
             curr=curr.nxt; // iterate
@@ -99,15 +99,15 @@ draw = function() {
     ctx.strokeStyle = "#FF0000"; // red selector
     drawCircle(paths[dude.selectedIndex].firstNode.x, paths[dude.selectedIndex].firstNode.y, dude.selectorRadius); //  draw selector
     
-    ctx.fillStyle = "#929292";
+    ctx.fillStyle = "#444444";
     ctx.fillRect(10,10,150,20);
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#BBBBBB";
     ctx.fillRect(12,12,146,16);
     ctx.fillStyle = "#FF0000";
     ctx.fillRect(12,12,146*dude.health,16);
     
     
-    ctx.fillStyle = "#FFFF00";
+    ctx.fillStyle = "#222222";
     ctx.fillText("PATTERN:",10,50);
     for(var i=0;i<dude.input.length;i++) { // PRINT USER INPUT
         ctx.fillText(dude.input[i],65+10*i,50);
@@ -116,6 +116,7 @@ draw = function() {
 };
 
 process = function () {
+    var f = frameCount;
     if (paths[dude.selectedIndex].live) { // if there is a signal on selected path
         var counter = 0; // counts matched nodes for signal to traverse
         for(var i=0;i<dude.input.length;i++) { // loop through user input pattern
@@ -125,6 +126,7 @@ process = function () {
             counter++; // count every success
         }
         if(counter>0 && frameCount>signalLife) signals[paths[dude.selectedIndex].signalIndex].birth+=signalLife;
+        else if (counter>0) signals[paths[dude.selectedIndex].signalIndex].birth=f;
         signals[paths[dude.selectedIndex].signalIndex].nodeVal+=counter; // update signal's position on path
         var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's new node position and values
         for (var i=0; i<signals[paths[dude.selectedIndex].signalIndex].nodeVal;i++) {
