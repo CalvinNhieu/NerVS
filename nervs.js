@@ -1,3 +1,5 @@
+startup = true;
+
 $(document).ready(function() { // SET UP GAME LOOP
 	c=document.getElementById("canvas");
 	c.width=750;
@@ -14,42 +16,61 @@ $(document).ready(function() { // SET UP GAME LOOP
 
 init = function() {
     FPS = 60; // game set to 60 FPS
+    frameCount = 0;
+    signalLife = 500;
     b = new Brain(); // init brain position values
     initPaths(); // create path array
     generateMap(); // randomly generate game field (build each path)
     
     dude = new Player(); // player
-    signals = new Array(3); // signal array
-    
-    generateSignal(0);
-    generateSignal(1);
-    generateSignal(2);
-    
+    signals = new Array(); // signal array
+    if (startup) {
     document.addEventListener('keydown', function(e) { // KEYBOARD INPUT
         if (e.keyCode == 65) { // A - LEFT
-            if (paths[dude.selectedIndex].live) dude.input[dude.input.length] = 'l';
+            if (paths[dude.selectedIndex].live) {
+                dude.input[dude.input.length] = 'l';
+            }
         }
         if (e.keyCode == 87) { // W - UP
-            if (paths[dude.selectedIndex].live) dude.input[dude.input.length] = 'u';
+            if (paths[dude.selectedIndex].live) {
+                dude.input[dude.input.length] = 'u';
+            }
         }
         if (e.keyCode == 68) { // D - RIGHT
-            if (paths[dude.selectedIndex].live) dude.input[dude.input.length] = 'r';
+            if (paths[dude.selectedIndex].live) {
+                dude.input[dude.input.length] = 'r';
+            }
         }
-        if (e.keyCode == 83) { // S - DOWN
+        if (e.keyCode == 32) { // SPACEBAR - CONFIRM
             process();
-            dude.input = new Array();
+            clear();
         }
-        if (e.keyCode == 16) { // SHIFT - NERVE SELECTOR
+        if (e.keyCode == 66) { // B - RIGHT NERVE SELECTOR
             dude.selectedIndex++;
             if (dude.selectedIndex >= paths.length) dude.selectedIndex=0;
-            dude.input = new Array();
+            clear();
         }
-    }, false);        
-    document.addEventListener('keyup', function(e) { // KEYBOARD INPUT
+        if (e.keyCode == 86) { // V - LEFT NERVE SELECTOR
+            dude.selectedIndex--;
+            if (dude.selectedIndex < 0) dude.selectedIndex=paths.length-1;
+            clear();
+        }
     }, false);
+        startup = false;
+    }
 };
 
 update = function() { // game logic
+    frameCount++;
+    if(frameCount==100) generateSignal(0);
+    if(frameCount==signalLife*1) generateSignal(1);
+    if(frameCount==signalLife*2) generateSignal(2);
+    if(frameCount==signalLife*3) generateSignal(3);
+    if(frameCount==signalLife*4) generateSignal(4);
+    if(frameCount==signalLife*5) generateSignal(5);
+    signalLifetime();
+    checkGame();
+    checkMatches();
 };
 
 draw = function() {
@@ -59,52 +80,106 @@ draw = function() {
     ctx.fillRect(b.x,b.y,b.width,b.height); // draw brain
     
     for (var i=0;i<paths.length;i++) { // loop through paths
-        ctx.strokeStyle = 'rgb('+paths[i].color.r+','+paths[i].color.g+','+paths[i].color.b+')'; //select path color
         var curr = paths[i].firstNode; // for iteration
         while (curr.nxt) { // for iteration
+            if(curr.matched) ctx.strokeStyle = "#FFFFFF";
+            else ctx.strokeStyle = 'rgb('+paths[i].color.r+','+paths[i].color.g+','+paths[i].color.b+')'; //select path color
             drawLine(curr.x,curr.y,curr.nxt.x,curr.nxt.y); // connect nodes
             curr=curr.nxt; // iterate
         }
     }
     
-    ctx.fillStyle = "#FFFF00"; // yellow signals
     for (var i=0;i<signals.length;i++) {
+        if(signals[i].existence<signalLife) ctx.fillStyle = "#FFFF00"; 
+        else if(signals[i].existence>=signalLife && signals[i].existence<signalLife*2) ctx.fillStyle = "#FFBB00"; 
+        else ctx.fillStyle = "#FF0000"; 
         fillCircle(signals[i].x,signals[i].y,signals[i].radius);
     }
     
     ctx.strokeStyle = "#FF0000"; // red selector
     drawCircle(paths[dude.selectedIndex].firstNode.x, paths[dude.selectedIndex].firstNode.y, dude.selectorRadius); //  draw selector
     
-    ctx.fillText("PATTERN:",10,20);
+    ctx.fillStyle = "#929292";
+    ctx.fillRect(10,10,150,20);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(12,12,146,16);
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(12,12,146*dude.health,16);
+    
+    
+    ctx.fillStyle = "#FFFF00";
+    ctx.fillText("PATTERN:",10,50);
     for(var i=0;i<dude.input.length;i++) { // PRINT USER INPUT
-        ctx.fillText(dude.input[i],65+10*i,20);
+        ctx.fillText(dude.input[i],65+10*i,50);
     }
-    ctx.fillText("SCORE: "+dude.score,10,40);
+    ctx.fillText("SCORE: "+dude.score,10,70);
 };
 
 process = function () {
-    if (paths[dude.selectedIndex].live) {
-        var counter = 0;
-        for(var i=0;i<dude.input.length;i++) {
-            if(paths[dude.selectedIndex].key[signals[paths[dude.selectedIndex].signalIndex].nodeVal+i]!=dude.input[i]) {
-                return;
+    if (paths[dude.selectedIndex].live) { // if there is a signal on selected path
+        var counter = 0; // counts matched nodes for signal to traverse
+        for(var i=0;i<dude.input.length;i++) { // loop through user input pattern
+            if(paths[dude.selectedIndex].key[signals[paths[dude.selectedIndex].signalIndex].nodeVal+i]!=dude.input[i]) { // if any input mismatches with path's key
+                return; // exit without doing anything
             }
-            counter++;
+            counter++; // count every success
         }
-        signals[paths[dude.selectedIndex].signalIndex].nodeVal+=counter;
-        var curr = paths[dude.selectedIndex].firstNode;
+        if(counter>0 && frameCount>signalLife) signals[paths[dude.selectedIndex].signalIndex].birth+=signalLife;
+        signals[paths[dude.selectedIndex].signalIndex].nodeVal+=counter; // update signal's position on path
+        var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's new node position and values
         for (var i=0; i<signals[paths[dude.selectedIndex].signalIndex].nodeVal;i++) {
-            curr = curr.nxt;
+            curr = curr.nxt; // iterate
         }
-        signals[paths[dude.selectedIndex].signalIndex].x = curr.x;
-        signals[paths[dude.selectedIndex].signalIndex].y = curr.y;
+        signals[paths[dude.selectedIndex].signalIndex].x = curr.x; // update signal's x
+        signals[paths[dude.selectedIndex].signalIndex].y = curr.y; // update signal's y
     } 
     
-    if (signals[paths[dude.selectedIndex].signalIndex].y == paths[dude.selectedIndex].lastNode.y) { // IF COMPLETED
-        generateSignal(paths[dude.selectedIndex].signalIndex);
-        dude.score++;
-        paths[dude.selectedIndex].live = false;
-        paths[dude.selectedIndex].selectedIndex = -1;
+    if (signals[paths[dude.selectedIndex].signalIndex].y == paths[dude.selectedIndex].lastNode.y) { // IF COMPLETED ENTIRE PATH
+        generateSignal(paths[dude.selectedIndex].signalIndex); // generate a new signal
+        dude.score++; // increase score
+        paths[dude.selectedIndex].live = false; // reset path (no signal)
+        paths[dude.selectedIndex].selectedIndex = -1; // reset path (no signal-no signal index)
+    }
+};
+
+checkMatches = function() {
+    var curr = paths[dude.selectedIndex].firstNode; // temp node to acquire signal's node position
+    for (var i=0; i<signals[paths[dude.selectedIndex].signalIndex].nodeVal;i++) { // iterate through path until arrive at signal position
+        curr = curr.nxt; // iterate
+    }
+    for(var i=0;i<dude.input.length;i++) {
+        if (dude.input[i] == paths[dude.selectedIndex].key[signals[paths[dude.selectedIndex].signalIndex].nodeVal+i]) {
+            curr.matched = true;
+        }
+        else {
+            clear();
+            return;
+        }
+        curr=curr.nxt;
+    }
+};
+
+clear = function() {
+    dude.input = new Array();
+    for(var i=0;i<paths.length;i++) {
+        var curr = paths[i].firstNode;
+        while (curr.nxt) {
+            curr.matched = false;
+            curr = curr.nxt;
+        }
+    }
+};
+
+signalLifetime = function() {
+    for(var i=0;i<signals.length;i++) {
+        signals[i].existence = frameCount - signals[i].birth;
+        if (signals[i].existence > signalLife*3) {
+            paths[signals[i].pathIndex].live = false;
+            paths[signals[i].pathIndex].signalIndex = -1;
+            clear();
+            generateSignal(i);
+            dude.health-=0.1;
+        }
     }
 };
 
@@ -157,22 +232,29 @@ generateSignal = function(indx) {
         generateSignal(indx);
         return;
     }
-    signals[indx] = new Signal(idx);
+    signals[indx] = new Signal(idx,frameCount);
     paths[idx].live = true;
     paths[idx].signalIndex = indx;
 };
+
+checkGame = function () {
+    if (dude.health < 0.1) init();
+}
 
 Player = function () {
     this.selectedIndex = 0;
     this.selectorRadius = 10;
     this.input = new Array();
     this.score = 0;
+    this.health = 1;
 }
 
-Signal = function (idx) {
+Signal = function (idx,f) {
     this.x = paths[idx].firstNode.x;
     this.y = paths[idx].firstNode.y;
+    this.pathIndex = idx;
     this.radius = 5;
+    this.birth = f;
     this.nodeVal = 0;
 }
 
@@ -191,6 +273,8 @@ Node = function(x,y) { // node object
     this.x = x;
     this.y = y;
     this.nxt;
+    
+    this.matched = false;
 };
 
 Brain = function() { // brain object
