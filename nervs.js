@@ -45,6 +45,9 @@ init = function() {
             process();
             clear();
         }
+        if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+            e.preventDefault();
+        }
         if (e.keyCode == 66) { // B - RIGHT NERVE SELECTOR
             dude.selectedIndex++;
             if (dude.selectedIndex >= paths.length) dude.selectedIndex=0;
